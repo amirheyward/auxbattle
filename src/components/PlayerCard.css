@@ -1,0 +1,19 @@
+.cardContainer {
+    display: flex;
+    flex-direction: column;
+    height: 140px;
+    width: 120px;
+    border-radius: 10px;
+    border: 1px solid black;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile {
+    height: 100px;
+    width: 100px;
+}
+
+.username {
+
+}
