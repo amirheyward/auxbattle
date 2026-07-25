@@ -11,13 +11,14 @@ function Lobby() {
   async function findSong() {
     const query = inputRef.current!.value;
     const sanQuery = query.trim().replace(/ /g, "%20");
+
     try {
       const response = await axios.get(
         `http://127.0.0.1:8000/find?q=${sanQuery}`,
       );
 
       setDisplayOn(true);
-      const url = response.data.url;
+      const url = response.data.url.replace("watch?v=", "embed/");
       setContent(url);
     } catch (e) {
       console.error(e);
@@ -29,7 +30,7 @@ function Lobby() {
       <PlayerCard />
       <input ref={inputRef} type="text" />
       <button onClick={async () => findSong()}></button>
-      {displayOn && <div className="display">{content}</div>}
+      {displayOn && <div className="display"><iframe src={content}></iframe></div>}
     </div>
   );
 }
