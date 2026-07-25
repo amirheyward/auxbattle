@@ -4,3 +4,11 @@
   align-items: center;
   height: 100vh;
 }
+
+.display {
+  height: 200px;
+}
+
+.display video {
+  max-height: 100%;
+}

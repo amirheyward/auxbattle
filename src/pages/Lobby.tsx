@@ -2,10 +2,11 @@ import PlayerCard from "../components/PlayerCard";
 import "./Lobby.css";
 import { useRef, useState } from "react";
 import axios from "axios";
+import ReactPlayer from "react-player";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [content, setContent] = useState("");
+  const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
 
   async function findSong() {
@@ -15,11 +16,12 @@ function Lobby() {
     try {
       const response = await axios.get(
         `http://127.0.0.1:8000/find?q=${sanQuery}`,
+        { responseType: "blob" },
       );
+      const blob = response.data;
 
       setDisplayOn(true);
-      const url = response.data.url.replace("watch?v=", "embed/");
-      setContent(url);
+      setUrl(URL.createObjectURL(blob));
     } catch (e) {
       console.error(e);
     }
@@ -30,7 +32,11 @@ function Lobby() {
       <PlayerCard />
       <input ref={inputRef} type="text" />
       <button onClick={async () => findSong()}></button>
-      {displayOn && <div className="display"><iframe src={content}></iframe></div>}
+      {displayOn && url && (
+        <div className="display">
+          <video src={url} controls/>
+        </div>
+      )}
     </div>
   );
 }
