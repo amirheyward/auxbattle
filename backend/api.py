@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-import atexit
 import yt_dlp
 import os
 import shutil
@@ -31,7 +30,7 @@ def find_song_url(q: str):
     ydl_opts = {
         "no_warnings": True,
         "no_playlist": True,
-        "format": "bestvideo+bestaudio",
+        "format": "bestvideo+bestaudio", # ffmpeg must be installed on the system
         "merge_output_format": "mp4",
         "outtmpl": os.path.join(
             str(temp_dir), "%(title)s.%(ext)s"  # naming convention for yt dlp

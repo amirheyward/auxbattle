@@ -34,7 +34,7 @@ function Lobby() {
       <button onClick={async () => findSong()}></button>
       {displayOn && url && (
         <div className="display">
-          <video src={url} controls/>
+          <video src={url} controls />
         </div>
       )}
     </div>
