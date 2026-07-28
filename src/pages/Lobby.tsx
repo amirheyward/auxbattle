@@ -2,7 +2,6 @@ import PlayerCard from "../components/PlayerCard";
 import "./Lobby.css";
 import { useRef, useState } from "react";
 import axios from "axios";
-import ReactPlayer from "react-player";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -15,7 +14,7 @@ function Lobby() {
 
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/find?q=${sanQuery}`,
+        `http://127.0.0.1:8080/find?q=${sanQuery}`,
         { responseType: "blob" },
       );
       const blob = response.data;
@@ -27,16 +26,61 @@ function Lobby() {
     }
   }
 
+  async function startVote() {
+    try {
+      const response = await axios.post("http://127.0.0.1:8080/startgame");
+      console.log(response.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function castVote(vote: string) {
+    try {
+      const response = await axios.post("http://127.0.0.1:8080/vote", {
+        vote: vote,
+      });
+      console.log(response.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function endVote() {
+    try {
+      const response = await axios.post("http://127.0.0.1:8080/endvote");
+      console.log(response.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function getVotes() {
+    try {
+      const response = await axios.get("http://127.0.0.1:8080/vote");
+      console.log(response.data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+
   return (
     <div className="mainContainer">
-      <PlayerCard />
-      <input ref={inputRef} type="text" />
-      <button onClick={async () => findSong()}></button>
-      {displayOn && url && (
+      <div className="field">
+        <PlayerCard />
         <div className="display">
-          <video src={url} controls />
+          {displayOn && <video src={url} controls />}
         </div>
-      )}
+        <PlayerCard />
+      </div>
+
+      <input ref={inputRef} type="text" />
+      <button onClick={async () => findSong()}>Find Song</button>
+      <button onClick={async () => startVote()}>Start Vote</button>
+      <button onClick={async () => castVote("A")}>Vote</button>
+      <button onClick={async () => endVote()}>End Vote</button>
+      <button onClick={async () => getVotes()}>Get Votes</button>
     </div>
   );
 }
