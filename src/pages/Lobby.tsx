@@ -1,13 +1,14 @@
 import PlayerCard from "../components/PlayerCard";
 import "./Lobby.css";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import axios from "axios";
+import LobbyContext from "../context/LobbyContext";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
-  let lobbyId = -1;
+  const {lobbyId, setLobbyId} = useContext(LobbyContext)
 
   async function findSong() {
     const query = inputRef.current!.value;
@@ -28,13 +29,13 @@ function Lobby() {
   }
 
   async function startVote() {
-    try {
-      const response = await axios.post("http://127.0.0.1:8080/createlobby");
-      lobbyId = response.data.lobbyId;
-      console.log(response.data);
-    } catch (e) {
-      console.error(e);
-    }
+    // try {
+    //   const response = await axios.post("http://127.0.0.1:8080/createlobby");
+    //   lobbyId = response.data.lobbyId;
+    //   console.log(response.data);
+    // } catch (e) {
+    //   console.error(e);
+    // }
   }
 
   async function castVote(vote: string) {
