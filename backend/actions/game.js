@@ -1,5 +1,4 @@
-export default class Game {
-  votes = [];
+class Game {
   constructor() {
     this.votes = [];
   }
@@ -31,3 +30,5 @@ export default class Game {
     return this.votes;
   }
 }
+
+export { Game };

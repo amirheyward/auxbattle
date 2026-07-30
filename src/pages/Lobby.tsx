@@ -7,6 +7,7 @@ function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
+  let lobbyId = -1;
 
   async function findSong() {
     const query = inputRef.current!.value;
@@ -28,7 +29,8 @@ function Lobby() {
 
   async function startVote() {
     try {
-      const response = await axios.post("http://127.0.0.1:8080/startgame");
+      const response = await axios.post("http://127.0.0.1:8080/createlobby");
+      lobbyId = response.data.lobbyId;
       console.log(response.data);
     } catch (e) {
       console.error(e);
@@ -39,6 +41,7 @@ function Lobby() {
     try {
       const response = await axios.post("http://127.0.0.1:8080/vote", {
         vote: vote,
+        lobbyId: lobbyId,
       });
       console.log(response.data);
     } catch (e) {
@@ -48,7 +51,9 @@ function Lobby() {
 
   async function endVote() {
     try {
-      const response = await axios.post("http://127.0.0.1:8080/endvote");
+      const response = await axios.post("http://127.0.0.1:8080/endvote", {
+        lobbyId: lobbyId,
+      });
       console.log(response.data);
     } catch (e) {
       console.error(e);
@@ -57,13 +62,16 @@ function Lobby() {
 
   async function getVotes() {
     try {
-      const response = await axios.get("http://127.0.0.1:8080/vote");
+      const response = await axios.get("http://127.0.0.1:8080/vote",
+        {params: {
+          lobbyId: lobbyId
+        }}
+      );
       console.log(response.data);
     } catch (e) {
       console.error(e);
     }
   }
-
 
   return (
     <div className="mainContainer">
