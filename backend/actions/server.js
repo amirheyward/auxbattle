@@ -19,6 +19,15 @@ app.post("/createlobby", (req, res) => {
   res.status(200).json({ lobbyId: lobbyId });
 });
 
+app.post("/joinlobby", (req, res) => {
+  const lobbyId = req.body.lobbyId;
+  if (lobbiesMap[lobbyId]) {
+    res.status(200).json({ success: 1 });
+  } else {
+    res.status(400).json({ message: "Lobby not found" });
+  }
+});
+
 app.post("/vote", (req, res) => {
   const lobbyId = req.body.lobbyId;
   const vote = req.body.vote;
@@ -28,7 +37,7 @@ app.post("/vote", (req, res) => {
     game.castVote(vote);
     res.status(200).json({ success: 1 });
   } else {
-    res.status(400).json({ error: "Lobby not found" });
+    res.status(400).json({ message: "Lobby not found" });
   }
 });
 
@@ -40,7 +49,7 @@ app.get("/vote", (req, res) => {
     const votes = game.getVotes();
     res.status(200).json({ votes: votes });
   } else {
-    res.status(400).json({ error: "Lobby not found" });
+    res.status(400).json({ message: "Lobby not found" });
   }
 });
 
@@ -52,7 +61,7 @@ app.post("/endvote", (req, res) => {
     const winner = game.endVote();
     res.status(200).json({ winner: winner });
   } else {
-    res.status(400).json({ error: "Lobby not found" });
+    res.status(400).json({ message: "Lobby not found" });
   }
 });
 

@@ -16,7 +16,7 @@ function Lobby() {
 
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8080/find?q=${sanQuery}`,
+        `http://127.0.0.1:8000/find?q=${sanQuery}`,
         { responseType: "blob" },
       );
       const blob = response.data;
@@ -30,7 +30,7 @@ function Lobby() {
 
   async function startVote() {
     // try {
-    //   const response = await axios.post("http://127.0.0.1:8080/createlobby");
+    //   const response = await axios.post("http://127.0.0.1:8000/createlobby");
     //   lobbyId = response.data.lobbyId;
     //   console.log(response.data);
     // } catch (e) {
@@ -40,7 +40,7 @@ function Lobby() {
 
   async function castVote(vote: string) {
     try {
-      const response = await axios.post("http://127.0.0.1:8080/vote", {
+      const response = await axios.post("http://127.0.0.1:8000/vote", {
         vote: vote,
         lobbyId: lobbyId,
       });
@@ -52,7 +52,7 @@ function Lobby() {
 
   async function endVote() {
     try {
-      const response = await axios.post("http://127.0.0.1:8080/endvote", {
+      const response = await axios.post("http://127.0.0.1:8000/endvote", {
         lobbyId: lobbyId,
       });
       console.log(response.data);
@@ -63,7 +63,7 @@ function Lobby() {
 
   async function getVotes() {
     try {
-      const response = await axios.get("http://127.0.0.1:8080/vote",
+      const response = await axios.get("http://127.0.0.1:8000/vote",
         {params: {
           lobbyId: lobbyId
         }}
