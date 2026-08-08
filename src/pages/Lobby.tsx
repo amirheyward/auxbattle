@@ -27,7 +27,7 @@ function Lobby() {
 
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/find?q=${sanQuery}`,
+        `http://127.0.0.1:8000/find?q=${sanQuery}&id=${lobbyId}`,
         { responseType: "blob" },
       );
       const blob = response.data;
@@ -88,7 +88,12 @@ function Lobby() {
       <div className="field">
         <PlayerCard />
         <div className="display">
-          {displayOn && <video src={url} controls />}
+          {displayOn && (
+            <video
+              src={url}
+              autoPlay
+            />
+          )}
         </div>
         <PlayerCard />
       </div>
