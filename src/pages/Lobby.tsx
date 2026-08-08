@@ -1,14 +1,25 @@
 import PlayerCard from "../components/PlayerCard";
 import "./Lobby.css";
-import { useContext, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import LobbyContext from "../context/LobbyContext";
+import { useParams } from "react-router";
+import { socket } from "../socket";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
-  const {lobbyId, setLobbyId} = useContext(LobbyContext)
+  const { lobbyId } = useParams();
+
+  function sendMessage() {
+    socket.emit("message", "Hello");
+  }
+
+  useEffect(() => {
+    socket.on("message", (msg) => {
+      console.log(msg);
+    });
+  }, [socket]);
 
   async function findSong() {
     const query = inputRef.current!.value;
@@ -24,53 +35,51 @@ function Lobby() {
       setDisplayOn(true);
       setUrl(URL.createObjectURL(blob));
     } catch (e) {
-      console.error(e);
+      if (axios.isAxiosError(e)) {
+        console.error(e.response?.data);
+      }
     }
-  }
-
-  async function startVote() {
-    // try {
-    //   const response = await axios.post("http://127.0.0.1:8000/createlobby");
-    //   lobbyId = response.data.lobbyId;
-    //   console.log(response.data);
-    // } catch (e) {
-    //   console.error(e);
-    // }
   }
 
   async function castVote(vote: string) {
     try {
-      const response = await axios.post("http://127.0.0.1:8000/vote", {
+      const response = await axios.post("http://127.0.0.1:8080/vote", {
         vote: vote,
         lobbyId: lobbyId,
       });
       console.log(response.data);
     } catch (e) {
-      console.error(e);
+      if (axios.isAxiosError(e)) {
+        console.error(e.response?.data);
+      }
     }
   }
 
   async function endVote() {
     try {
-      const response = await axios.post("http://127.0.0.1:8000/endvote", {
+      const response = await axios.post("http://127.0.0.1:8080/endvote", {
         lobbyId: lobbyId,
       });
       console.log(response.data);
     } catch (e) {
-      console.error(e);
+      if (axios.isAxiosError(e)) {
+        console.error(e.response?.data);
+      }
     }
   }
 
   async function getVotes() {
     try {
-      const response = await axios.get("http://127.0.0.1:8000/vote",
-        {params: {
-          lobbyId: lobbyId
-        }}
-      );
+      const response = await axios.get("http://127.0.0.1:8080/vote", {
+        params: {
+          lobbyId: lobbyId,
+        },
+      });
       console.log(response.data);
     } catch (e) {
-      console.error(e);
+      if (axios.isAxiosError(e)) {
+        console.error(e.response?.data);
+      }
     }
   }
 
@@ -86,10 +95,10 @@ function Lobby() {
 
       <input ref={inputRef} type="text" />
       <button onClick={async () => findSong()}>Find Song</button>
-      <button onClick={async () => startVote()}>Start Vote</button>
       <button onClick={async () => castVote("A")}>Vote</button>
       <button onClick={async () => endVote()}>End Vote</button>
       <button onClick={async () => getVotes()}>Get Votes</button>
+      <button onClick={() => sendMessage()}>Send Message</button>
     </div>
   );
 }

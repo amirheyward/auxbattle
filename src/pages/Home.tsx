@@ -1,20 +1,17 @@
 import axios from "axios";
-import { useContext, useRef } from "react";
-import LobbyContext from "../context/LobbyContext";
+import { useRef } from "react";
 import { useNavigate } from "react-router";
 useNavigate;
 
 function Home() {
   const navigate = useNavigate();
-  const { setLobbyId } = useContext(LobbyContext);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function createLobby() {
     try {
       const response = await axios.post("http://127.0.0.1:8080/createlobby");
       console.log(response.data);
-      setLobbyId(response.data.lobbyId);
-      navigate("/lobby");
+      navigate(`/lobby/${response.data.lobbyId}`);
     } catch (e) {
       console.error(e);
     }
@@ -26,8 +23,8 @@ function Home() {
       const response = await axios.post("http://127.0.0.1:8080/joinlobby", {
         lobbyId: lobbyId,
       });
-      setLobbyId(lobbyId);
-      navigate("/lobby");
+      
+      navigate(`/lobby/${lobbyId}`);
     } catch (e) {
       if (axios.isAxiosError(e)) {
         console.error(e.response?.data);
