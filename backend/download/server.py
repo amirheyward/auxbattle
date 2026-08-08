@@ -51,7 +51,7 @@ def iter_file(filename):
             yield chunk  # pauses function execution then resumes from here on the next call
 
 
-@app.get("/find")
+@app.get("/song")
 def find_song_url(q: str, id: str):
     # search relevant directory for previous queries
     temp_dir = None

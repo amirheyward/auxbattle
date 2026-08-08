@@ -76,6 +76,12 @@ app.post("/endvote", (req, res) => {
   }
 });
 
+app.post("/song", (req, res) => {
+  const lobbyId = req.body.lobbyId;
+  const query = req.body.q;
+  io.emit("lobbyDownload", {query: query})
+})
+
 // WebSocket Server
 // on(ev) adds an event listener for ev
 io.on("connection", (socket) => {

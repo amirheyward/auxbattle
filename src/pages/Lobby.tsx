@@ -7,6 +7,8 @@ import { socket } from "../socket";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const rangeRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
   const { lobbyId } = useParams();
@@ -19,21 +21,36 @@ function Lobby() {
     socket.on("message", (msg) => {
       console.log(msg);
     });
+
+    socket.on("lobbyDownload", async ({ query }: { query: string }) => {
+      try {
+        const sanQuery = query.trim().replace(/ /g, "%20");
+        const response = await axios.get(
+          `http://127.0.0.1:8000/song?q=${sanQuery}&id=${lobbyId}`,
+          { responseType: "blob" },
+        );
+        const blob = response.data;
+
+        setDisplayOn(true);
+        setUrl(URL.createObjectURL(blob));
+      } catch (e) {
+        if (axios.isAxiosError(e)) {
+          console.error(e.response?.data);
+        }
+      }
+    });
   }, [socket]);
 
   async function findSong() {
     const query = inputRef.current!.value;
-    const sanQuery = query.trim().replace(/ /g, "%20");
 
+    // send song request to lobby websocket, then broadcast order to download
     try {
-      const response = await axios.get(
-        `http://127.0.0.1:8000/find?q=${sanQuery}&id=${lobbyId}`,
-        { responseType: "blob" },
-      );
-      const blob = response.data;
-
-      setDisplayOn(true);
-      setUrl(URL.createObjectURL(blob));
+      const response = await axios.post("http://127.0.0.1:8080/song", {
+        q: query,
+        lobbyId: lobbyId,
+      });
+      console.log(response.data)
     } catch (e) {
       if (axios.isAxiosError(e)) {
         console.error(e.response?.data);
@@ -89,10 +106,36 @@ function Lobby() {
         <PlayerCard />
         <div className="display">
           {displayOn && (
-            <video
-              src={url}
-              autoPlay
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={url}
+                autoPlay
+                onLoadedMetadata={() => {
+                  videoRef.current!.volume = 0.05;
+                  rangeRef.current!.value = "20";
+                }}
+              />
+              <div className="controlsContainer">
+                <button
+                  onClick={() => {
+                    videoRef.current!.muted = !videoRef.current!.muted;
+                  }}
+                >
+                  Mute
+                </button>
+                <input
+                  ref={rangeRef}
+                  type="range"
+                  min={0}
+                  max={100}
+                  onChange={(e) => {
+                    videoRef.current!.volume = Number(e.target.value) / 400;
+                  }}
+                />
+                <button>Vote Pause</button>
+              </div>
+            </>
           )}
         </div>
         <PlayerCard />
