@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask
+
 
 import yt_dlp
 import os
@@ -20,8 +21,12 @@ app.add_middleware(
     allow_origins=origins,
 )
 
-# actually useful functions are .download() and .exctract_info()
+# actually useful yt-dlp functions are .download() and .exctract_info()
 
+def iter_file(filename):
+    with open(filename, "rb") as file:
+        while chunk := file.read(1024 * 1024): # Chunk = 1 MB
+            yield chunk # pauses function execution then resumes from here on the next call
 
 @app.get("/find")
 def find_song_url(q: str):
@@ -43,10 +48,9 @@ def find_song_url(q: str):
 
         filename = ydl.prepare_filename(v)
         print("\n\n" + filename + "\n\n")
-        return FileResponse(
-            filename,
+        return StreamingResponse(
+            iter_file(filename),
             media_type="video/mp4",
-            filename=os.path.basename(filename),
             background=BackgroundTask(lambda: shutil.rmtree(temp_dir)),
         )
 
