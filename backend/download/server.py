@@ -1,8 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from starlette.background import BackgroundTask
-
+from contextlib import asynccontextmanager
 
 import yt_dlp
 import os
@@ -10,6 +9,23 @@ import shutil
 import tempfile
 
 app = FastAPI()
+
+dir_names = []
+# Can't use atexit for cleanup since the program is being managed by uvicorn
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    yield
+
+    # Shutdown
+    for d in dir_names:
+        try:
+            shutil.rmtree(d)
+            print("Removed " + d)
+        except:
+            print("Error removing " + d)
+
+app = FastAPI(lifespan=lifespan)
 
 origins = ["http://127.0.0.1:8000", "http://127.0.0.1:5173"]  # self  # react
 
@@ -56,8 +72,8 @@ def find_song_url(q: str, id: str):
         queries = []
         temp_dir = tempfile.mkdtemp()
         lobby_dirs[id] = {"queries": queries, "temp_dir": temp_dir}
-    lobby_dirs[id]["queries"].append(q)
-        
+        dir_names.append(temp_dir) # for cleanup
+      
     ydl_opts = {
         "no_warnings": True,
         "no_playlist": True,
@@ -69,15 +85,18 @@ def find_song_url(q: str, id: str):
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        results = ydl.extract_info(f"ytsearch1:{q}", download=True)
-        v = results["entries"][0]
+        try: 
+            results = ydl.extract_info(f"ytsearch1:{q}", download=True)
+            v = results["entries"][0]
 
-        filename = ydl.prepare_filename(v)
-        print("\n\n" + filename + "\n\n")
-        return StreamingResponse(
-            iter_file(filename),
-            media_type="video/mp4",
-        )
-
+            filename = ydl.prepare_filename(v)
+            print("\n\n" + filename + "\n\n")
+            lobby_dirs[id]["queries"].append(q) # only add successful queries, since yt_dlp could fail
+            return StreamingResponse(
+                iter_file(filename),
+                media_type="video/mp4",
+            )
+        except yt_dlp.utils.DownloadError:
+            raise HTTPException(status_code=404, detail="Video unavailable") 
 
 # run on :8000
