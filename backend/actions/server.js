@@ -9,12 +9,11 @@ let lobbyCount = 0;
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(
-  server,
-  {cors: {
-    origin: ["http://127.0.0.1:8080", "http://127.0.0.1:5173"]
-  }},
-); // socket.io.Server
+const io = new Server(server, {
+  cors: {
+    origin: ["http://127.0.0.1:8080", "http://127.0.0.1:5173"],
+  },
+}); // socket.io.Server
 
 // HTTP endpoints
 app.use(express.json());
@@ -79,17 +78,26 @@ app.post("/endvote", (req, res) => {
 app.post("/song", (req, res) => {
   const lobbyId = req.body.lobbyId;
   const query = req.body.q;
-  io.emit("lobbyDownload", {query: query})
-})
+  io.to(lobbyId).emit("lobbyDownload", { query: query });
+});
 
 // WebSocket Server
 // on(ev) adds an event listener for ev
 io.on("connection", (socket) => {
   console.log(`New connection! ${socket.id}`);
 
+  // for comms
   socket.on("message", (data) => {
     console.log(`Recieved: ${data} (${socket.id})`);
     socket.emit("message", `The server recieved ${data}`);
+  });
+
+  // joining lobbies
+  socket.on("join", ({ lobbyId }) => {
+    if (!socket.rooms.has(lobbyId)) {
+      socket.join(lobbyId);
+      console.log(`(${socket.id}) rooms: ${Array.from(socket.rooms)}`);
+    }
   });
 });
 

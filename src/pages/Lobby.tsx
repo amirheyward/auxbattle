@@ -17,12 +17,26 @@ function Lobby() {
     socket.emit("message", "Hello");
   }
 
+  /*
+  note: in Strict Mode, js intentionally mounts twice to ensure you properly
+  handle side effects. this means ANYTHING inside a useEffect will run twice in strict mode.
+  for socket.io, this means (1) cleanup when possible in the front end and (2) handle multiple calls
+  on the server side.
+  */
+ 
+  // on initial render only
   useEffect(() => {
-    socket.on("message", (msg) => {
-      console.log(msg);
-    });
+    // join room on server side
+    socket.emit("join", { lobbyId: lobbyId });
+  }, []);
 
-    socket.on("lobbyDownload", async ({ query }: { query: string }) => {
+  // Socket.io events
+  useEffect(() => {
+    const handleMessage = (msg: string) => {
+      console.log(msg);
+    };
+
+    const handleLobbyDownload = async ({ query }: { query: string }) => {
       try {
         const sanQuery = query.trim().replace(/ /g, "%20");
         const response = await axios.get(
@@ -38,7 +52,19 @@ function Lobby() {
           console.error(e.response?.data);
         }
       }
-    });
+    };
+
+    // for comms
+    socket.on("message", handleMessage);
+
+    // order to download (all lobby users recieve simultaneously)
+    socket.on("lobbyDownload", handleLobbyDownload);
+
+    // useEffect treats the return value as a cleanup function
+    return () => {
+      socket.off("message", handleMessage);
+      socket.off("lobbyDownload", handleLobbyDownload);
+    };
   }, [socket]);
 
   async function findSong() {
@@ -50,7 +76,7 @@ function Lobby() {
         q: query,
         lobbyId: lobbyId,
       });
-      console.log(response.data)
+      console.log(response.data);
     } catch (e) {
       if (axios.isAxiosError(e)) {
         console.error(e.response?.data);
