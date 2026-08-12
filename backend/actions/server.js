@@ -78,7 +78,14 @@ app.post("/endvote", (req, res) => {
 app.post("/song", (req, res) => {
   const lobbyId = req.body.lobbyId;
   const query = req.body.q;
+  // handle empty query
+  if (query.trim() == "") {
+    res.status(400).json({ message: "Empty queries not allowed" });
+  }
+  console.log("Before emitting " + query);
   io.to(lobbyId).emit("lobbyDownload", { query: query });
+  console.log(`Broadcasting "${query}" to lobby ${lobbyId}`);
+  res.status(200).json({ success: 1 });
 });
 
 // WebSocket Server

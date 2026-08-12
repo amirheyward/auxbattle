@@ -19,11 +19,19 @@
   border: 1px solid black;
 }
 
-.display button {
+.controlsContainer {
+  height: 20px;
+}
+
+.controlsContainer input {
+  margin: 0;
+}
+
+.controlsContainer button {
   margin: 0;
   height: 20px;
 }
 
 .display video {
-  max-height: 180px;
+  height: 180px;
 }

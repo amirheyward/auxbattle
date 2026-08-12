@@ -52,7 +52,7 @@ def iter_file(filename):
 
 
 @app.get("/song")
-def find_song_url(q: str, id: str):
+def download_song(q: str, id: str):
     # search relevant directory for previous queries
     temp_dir = None
     if lobby := lobby_dirs.get(id):
@@ -87,6 +87,9 @@ def find_song_url(q: str, id: str):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try: 
             results = ydl.extract_info(f"ytsearch1:{q}", download=True)
+            # no song found
+            if (len(results["entries"]) == 0):
+                raise HTTPException(status_code=404, detail="No Video Found")
             v = results["entries"][0]
 
             filename = ydl.prepare_filename(v)
