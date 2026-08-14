@@ -89,7 +89,7 @@ def download_song(q: str, id: str):
             results = ydl.extract_info(f"ytsearch1:{q}", download=True)
             # no song found
             if (len(results["entries"]) == 0):
-                raise HTTPException(status_code=404, detail="No Video Found")
+                raise HTTPException(status_code=404, detail=f"No video found for this {q}")
             v = results["entries"][0]
 
             filename = ydl.prepare_filename(v)

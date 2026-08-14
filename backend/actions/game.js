@@ -31,4 +31,33 @@ class Game {
   }
 }
 
-export { Game };
+class Lobby {
+  constructor() {
+    this.game = undefined;
+    this.voters = [];
+    this.admins = [];
+  }
+
+  startGame() {
+    this.game = new Game();
+  }
+
+  addPlayer(username) {
+    if (!(players[0] && players[1])) {
+      players.append(username);
+      return 1;
+    }
+
+    return 0;
+  }
+
+  addVoters(username) {
+    this.voters.append(username);
+  }
+
+  setAdmin(username) {
+    this.admins.append(username);
+  }
+}
+
+export { Game, Lobby };

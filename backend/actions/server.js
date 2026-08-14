@@ -1,10 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { Game } from "./game.js";
+import { Lobby, Game } from "./game.js";
 import { Server } from "socket.io";
 import http from "node:http";
 
-const lobbiesMap = {}; // { id : game }
+const lobbiesMap = {}; // { id : Lobby }
 let lobbyCount = 0;
 
 const app = express();
@@ -25,13 +25,22 @@ app.use(
 
 app.post("/createlobby", (req, res) => {
   const lobbyId = lobbyCount++;
-  lobbiesMap[lobbyId] = new Game();
+  const username = req.body.username;
+  const lobby = new Lobby();
+  lobby.setAdmin(username);
+  lobby.addPlayer(username);
+  lobbiesMap[lobbyId] = lobby;
   res.status(200).json({ lobbyId: lobbyId });
 });
 
 app.post("/joinlobby", (req, res) => {
   const lobbyId = req.body.lobbyId;
-  if (lobbiesMap[lobbyId]) {
+  const username = req.body.username;
+  const lobby = lobbiesMap[lobbyId];
+  if (lobby) {
+    if (!lobby.addPlayer(username)) {
+      lobby.addVoter(username);
+    }
     res.status(200).json({ success: 1 });
   } else {
     res.status(400).json({ message: `Lobby ${lobbyId} not found` });
