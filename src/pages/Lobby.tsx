@@ -1,9 +1,15 @@
 import PlayerCard from "../components/PlayerCard";
 import "./Lobby.css";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useParams } from "react-router";
+import { redirect, useParams } from "react-router";
 import { socket } from "../socket";
+  Pregame,
+  PlayerChoice,
+  VotePhase,
+  Postgame,
+} from "../components/GamePhases";
+import UserContext from "../context/UserContext";
 
 function Lobby() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -12,6 +18,16 @@ function Lobby() {
   const [url, setUrl] = useState("");
   const [displayOn, setDisplayOn] = useState(false);
   const { lobbyId } = useParams();
+  const { username } = useContext(UserContext);
+
+  // i might change this later
+  // [Pregame, PlayerChoice, VotePhase, Postgame]
+  // all 0s = the actual video is playing
+  const [renderArr, setRenderArr] = useState([0, 0, 0, 0]);
+  let isPlayer = false;
+  let isVoter = false;
+  let playerTurn = 1;
+  const [winner, setWinner] = useState("");
 
   function sendMessage() {
     socket.emit("message", "Hello");
@@ -23,7 +39,7 @@ function Lobby() {
   for socket.io, this means (1) cleanup when possible in the front end and (2) handle multiple calls
   on the server side.
   */
- 
+
   // on initial render only
   useEffect(() => {
     // join room on server side
@@ -54,16 +70,30 @@ function Lobby() {
       }
     };
 
+    const handleStage = (stage: number[]) => {
+      setRenderArr(stage);
+    };
+
+    const handleWinner = (w: string) => {
+      setWinner(w);
+    };
+
     // for comms
     socket.on("message", handleMessage);
 
     // order to download (all lobby users recieve simultaneously)
     socket.on("lobbyDownload", handleLobbyDownload);
 
+    // for updating game state
+    socket.on("stage", handleStage);
+
+    socket.on("winner", handleWinner);
     // useEffect treats the return value as a cleanup function
     return () => {
       socket.off("message", handleMessage);
       socket.off("lobbyDownload", handleLobbyDownload);
+      socket.off("stage", handleStage);
+      socket.off(winner, handleWinner);
     };
   }, [socket]);
 
@@ -126,55 +156,70 @@ function Lobby() {
     }
   }
 
-  return (
-    <div className="mainContainer">
-      <div className="field">
-        <PlayerCard />
-        <div className="display">
-          {displayOn && (
-            <>
-              <video
-                ref={videoRef}
-                src={url}
-                autoPlay
-                onLoadedMetadata={() => {
-                  videoRef.current!.volume = 0.05;
-                  rangeRef.current!.value = "20";
-                }}
-              />
-              <div className="controlsContainer">
-                <button
-                  onClick={() => {
-                    videoRef.current!.muted = !videoRef.current!.muted;
-                  }}
-                >
-                  Mute
-                </button>
-                <input
-                  ref={rangeRef}
-                  type="range"
-                  min={0}
-                  max={100}
-                  onChange={(e) => {
-                    videoRef.current!.volume = Number(e.target.value) / 400;
+  function endVideo() {
+    socket.emit("endVideo", lobbyId);
+  }
+
+  if (renderArr[0]) {
+    return <Pregame />;
+  } else if (renderArr[1]) {
+    return <PlayerChoice />;
+  } else if (renderArr[2]) {
+    return <VotePhase />;
+  } else if (renderArr[3]) {
+    return <Postgame />;
+  } else {
+    return (
+      <div className="mainContainer">
+        <div className="field">
+          <PlayerCard />
+          <div className="display">
+            {displayOn && (
+              <>
+                <video
+                  ref={videoRef}
+                  src={url}
+                  autoPlay
+                  onLoadedMetadata={() => {
+                    videoRef.current!.volume = 0.05;
+                    rangeRef.current!.value = "20";
                   }}
                 />
-                <button>Vote Pause</button>
-              </div>
-            </>
-          )}
+                <div className="controlsContainer">
+                  <button
+                    onClick={() => {
+                      videoRef.current!.muted = !videoRef.current!.muted;
+                    }}
+                  >
+                    Mute
+                  </button>
+                  <input
+                    ref={rangeRef}
+                    type="range"
+                    min={0}
+                    max={100}
+                    onChange={(e) => {
+                      videoRef.current!.volume = Number(e.target.value) / 400;
+                    }}
+                  />
+                  <button>Vote Pause</button>
+                </div>
+              </>
+            )}
+          </div>
+          <PlayerCard />
         </div>
-        <PlayerCard />
-      </div>
 
-      <input ref={inputRef} type="text" />
-      <button onClick={async () => findSong()}>Find Song</button>
-      <button onClick={async () => castVote("A")}>Vote</button>
-      <button onClick={async () => endVote()}>End Vote</button>
-      <button onClick={async () => getVotes()}>Get Votes</button>
-      <button onClick={() => sendMessage()}>Send Message</button>
-    </div>
-  );
+        <input ref={inputRef} type="text" />
+        <button onClick={async () => findSong()}>Find Song</button>
+        <button onClick={async () => castVote("A")}>Vote</button>
+        <button onClick={async () => endVote()}>End Vote</button>
+        <button onClick={async () => getVotes()}>Get Votes</button>
+        <button onClick={() => sendMessage()}>Send Message</button>
+        <button onClick={async () => endVideo()}></button>
+      </div>
+    );
+  }
 }
 
 export default Lobby;

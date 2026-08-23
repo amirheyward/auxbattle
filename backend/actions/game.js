@@ -34,8 +34,16 @@ class Game {
 class Lobby {
   constructor() {
     this.game = undefined;
-    this.voters = [];
-    this.admins = [];
+    this.gameState = {
+      voters: undefined,
+      admins: [],
+      players: [],
+      voters: [],
+      stageArr: [1, 0, 0, 0],
+      // this is used for conditional rendering on the frontend
+      // [Pregame, PlayerChoice, VotePhase, Postgame]
+      // all 0s = the actual video is playing
+    };
   }
 
   startGame() {
@@ -43,7 +51,7 @@ class Lobby {
   }
 
   addPlayer(username) {
-    if (!(players[0] && players[1])) {
+    if (!(this.gameState.players[0] && this.gameState.players[1])) {
       players.append(username);
       return 1;
     }
@@ -51,12 +59,20 @@ class Lobby {
     return 0;
   }
 
-  addVoters(username) {
-    this.voters.append(username);
+  addVoter(username) {
+    this.gameState.voters.append(username);
   }
 
   setAdmin(username) {
-    this.admins.append(username);
+    this.gameState.admins.append(username);
+  }
+
+  setStage(stageArr) {
+    this.gameState.stageArr = stageArr;
+  }
+
+  get gameState() {
+    return this.gameState.append("votes", this.game?.votes)
   }
 }
 
