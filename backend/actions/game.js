@@ -9,7 +9,7 @@ class Game {
     }
   }
 
-  endVote() {
+  getWinner() {
     const counts = {};
     for (const vote of this.votes) {
       counts[vote] = (counts[vote] ?? 0) + 1;
@@ -34,24 +34,24 @@ class Game {
 class Lobby {
   constructor() {
     this.game = undefined;
-    this.gameState = {
-      voters: undefined,
+    this.lobbyState = {
+      voters: [],
       admins: [],
       players: [],
-      voters: [],
-      stageArr: [1, 0, 0, 0],
-      // this is used for conditional rendering on the frontend
-      // [Pregame, PlayerChoice, VotePhase, Postgame]
-      // all 0s = the actual video is playing
+      stage: 0, // [Pregame, PAChoice, PAVideo, PBChoice, PBVideo, VotePhase, Postgame]
+      winner: "",
     };
   }
 
   startGame() {
-    this.game = new Game();
+    if (this.lobbyState.stage == 0) {
+      this.game = new Game();
+      this.lobbyState.stage = 1;
+    }
   }
 
   addPlayer(username) {
-    if (!(this.gameState.players[0] && this.gameState.players[1])) {
+    if (!(this.lobbyState.players[0] && this.lobbyState.players[1])) {
       players.append(username);
       return 1;
     }
@@ -60,19 +60,29 @@ class Lobby {
   }
 
   addVoter(username) {
-    this.gameState.voters.append(username);
+    this.lobbyState.voters.append(username);
   }
 
   setAdmin(username) {
-    this.gameState.admins.append(username);
+    this.lobbyState.admins.append(username);
   }
 
-  setStage(stageArr) {
-    this.gameState.stageArr = stageArr;
+  nextStage() {
+    if (this.lobbyState.stage >= 6) {
+      this.lobbyState.stage = 0;
+      this.lobbyState.winner = "";
+    } else {
+      if (this.lobbyState.stage == 5) {
+        this.lobbyState.winner = this.game.getWinner();
+      }
+      this.lobbyState.stage++;
+    }
+
+    return this.lobbyState.stage;
   }
 
-  get gameState() {
-    return this.gameState.append("votes", this.game?.votes)
+  get lobbyState() {
+    return this.lobbyState.append("votes", this.game?.votes);
   }
 }
 

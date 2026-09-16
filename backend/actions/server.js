@@ -3,7 +3,6 @@ import cors from "cors";
 import { Lobby, Game } from "./game.js";
 import { Server } from "socket.io";
 import http from "node:http";
-import { emit } from "node:cluster";
 
 const lobbiesMap = {}; // { id : Lobby }
 let lobbyCount = 0;
@@ -42,62 +41,11 @@ app.post("/joinlobby", (req, res) => {
     if (!lobby.addPlayer(username)) {
       lobby.addVoter(username);
     }
-    io.to(lobbyId).emit("gameUpdate", lobby.gameState);
+    io.to(lobbyId).emit("gameUpdate", lobby.lobbyState);
     res.status(200).json({ success: 1 });
   } else {
     res.status(400).json({ message: `Lobby ${lobbyId} not found` });
   }
-});
-
-app.post("/startGame", (req, res) => {
-  const lobbyId = req.body.lobbyId;
-  const lobby = lobbiesMap[lobbyId];
-  const username = req.body.username;
-  if (lobby.admins.contains(username)) {
-    const nextStage = [0, 1, 0, 0];
-    lobby.startGame();
-    io.to(lobbyId).emit("startGame", { lobbyId: lobbyId });
-    // update game state
-    lobbiesMap[lobbyId].setStage(nextStage);
-    io.to(lobbyId).emit("stage", nextStage);
-    res.status(200).json({ success: 1 });
-  } else {
-    res.status(400).json({ message: `${username} is not an admin` });
-  }
-});
-
-app.post("/endvote", (req, res) => {
-  const lobbyId = req.body.lobbyId;
-  const lobby = lobbiesMap[lobbyId];
-  if (lobby instanceof Lobby) {
-    const winner = lobby.game.endVote();
-    const nextStage = [0, 0, 0, 1];
-    // update game state
-    lobbiesMap[lobbyId].setStage(nextStage);
-    io.to(lobbyId).emit("winner", winner);
-    io.to(lobbyId).emit("stage", nextStage);
-    res.status(200).json({ winner: winner });
-  } else {
-    res.status(400).json({ message: `Lobby ${lobbyId} not found` });
-  }
-});
-
-app.post("/song", (req, res) => {
-  const lobbyId = req.body.lobbyId;
-  const query = req.body.q;
-  // handle empty query
-  if (query.trim() == "") {
-    res.status(400).json({ message: "Empty queries not allowed" });
-    return;
-  }
-  const nextStage = [0, 0, 0, 0];
-  console.log("Before emitting " + query);
-  io.to(lobbyId).emit("lobbyDownload", { query: query });
-  // update game state
-  lobbiesMap[lobbyId].setStage(nextStage);
-  io.to(lobbyId).emit("stage", nextStage);
-  console.log(`Broadcasting "${query}" to Lobby ${lobbyId}`);
-  res.status(200).json({ success: 1 });
 });
 
 // WebSocket Server
@@ -115,10 +63,12 @@ io.on("connection", (socket) => {
   socket.on("join", ({ lobbyId, username }) => {
     if (!socket.rooms.has(lobbyId)) {
       socket.join(lobbyId);
-      // share game state with new user
-      socket.emit("stage", lobbiesMap[lobbyId].getStage());
       console.log(`(${socket.id}) rooms: ${Array.from(socket.rooms)}`);
       io.to(lobbyId).emit("message", `${username} has joined Lobby ${lobbyId}`);
+    }
+    const lobby = lobbiesMap[lobbyId];
+    if (lobby instanceof Lobby) {
+      socket.emit("gameUpdate", lobby.lobbyState);
     }
   });
 
@@ -128,7 +78,45 @@ io.on("connection", (socket) => {
     if (lobby instanceof Lobby) {
       lobby.game.castVote(vote);
       console.log(`Vote for ${vote} in Lobby ${lobbyId}`);
-      socket.emit("gameUpdate", lobby.gameState);
+      io.to(lobbyId).emit("gameUpdate", lobby.lobbyState);
+    }
+  });
+
+  // start game
+  socket.on("start", ({ lobbyId, username }) => {
+    const lobby = lobbiesMap[lobbyId];
+    if (lobby instanceof Lobby) {
+      if (lobby.lobbyState.admins.contains(username)) {
+        lobby.startGame();
+        console.log(`${username} started game in Lobby ${lobbyId}`);
+        io.to(lobbyId).emit("gameUpdate", lobby.lobbyState);
+      }
+    }
+  });
+
+  // force next stage from game admin
+  socket.on("next", ({ lobbyId, username }) => {
+    const lobby = lobbiesMap[lobbyId];
+    if (lobby instanceof Lobby) {
+      if (lobby.lobbyState.admins.contains(username)) {
+        lobby.nextStage();
+        console.log(`${username} forced next stage in Lobby ${lobbyId}`);
+        io.to(lobbyId).emit("gameUpdate", lobby.lobbyState);
+      }
+    }
+  });
+
+  // request song
+  socket.on("song", ({ lobbyId, username, query }) => {
+    const lobby = lobbiesMap[lobbyId];
+    if (lobby instanceof Lobby) {
+      if (lobby.lobbyState.players.contains(username)) {
+        lobby.nextStage();
+        console.log("Before emitting " + query);
+        io.to(lobbyId).emit("lobbyDownload", { query: query });
+        console.log(`Broadcasting "${query}" to Lobby ${lobbyId}`);
+        io.to(lobbyId).emit("gameUpdate", lobby.lobbyState);
+      }
     }
   });
 });

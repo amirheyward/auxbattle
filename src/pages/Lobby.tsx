@@ -4,34 +4,40 @@ import { useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { redirect, useParams } from "react-router";
 import { socket } from "../socket";
+import {
   Pregame,
   PlayerChoice,
   VotePhase,
   Postgame,
+  Waiting,
+  VideoPlayer,
 } from "../components/GamePhases";
 import UserContext from "../context/UserContext";
 
 function Lobby() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const rangeRef = useRef<HTMLInputElement>(null);
-  const [url, setUrl] = useState("");
-  const [displayOn, setDisplayOn] = useState(false);
-  const { lobbyId } = useParams();
+  let { lobbyId } = useParams();
+  lobbyId = lobbyId ?? "";
   const { username } = useContext(UserContext);
+  const [renderStage, setRenderStage] = useState(0); // [Pregame, PAChoice, PAVideo, PBChoice, PBVideo, VotePhase, Postgame]
+  const [url, setUrl] = useState("");
 
-  // i might change this later
-  // [Pregame, PlayerChoice, VotePhase, Postgame]
-  // all 0s = the actual video is playing
-  const [renderArr, setRenderArr] = useState([0, 0, 0, 0]);
-  let isPlayer = false;
-  let isVoter = false;
-  let playerTurn = 1;
-  const [winner, setWinner] = useState("");
+  type gameStateType = {
+    voters: string[];
+    admins: string[];
+    players: string[];
+    stage: number;
+    winner: string;
+    votes: undefined | string[];
+  };
 
-  function sendMessage() {
-    socket.emit("message", "Hello");
-  }
+  let gameState: gameStateType = {
+    voters: [],
+    admins: [],
+    players: [],
+    stage: 0, // [Pregame, PAChoice, PAVideo, PBChoice, PBVideo, VotePhase, Postgame]
+    winner: "",
+    votes: undefined,
+  };
 
   /*
   note: in Strict Mode, js intentionally mounts twice to ensure you properly
@@ -61,7 +67,6 @@ function Lobby() {
         );
         const blob = response.data;
 
-        setDisplayOn(true);
         setUrl(URL.createObjectURL(blob));
       } catch (e) {
         if (axios.isAxiosError(e)) {
@@ -70,12 +75,9 @@ function Lobby() {
       }
     };
 
-    const handleStage = (stage: number[]) => {
-      setRenderArr(stage);
-    };
-
-    const handleWinner = (w: string) => {
-      setWinner(w);
+    const handleGameUpdate = (newGameState: gameStateType) => {
+      gameState = newGameState;
+      setRenderStage(gameState.stage);
     };
 
     // for comms
@@ -85,140 +87,40 @@ function Lobby() {
     socket.on("lobbyDownload", handleLobbyDownload);
 
     // for updating game state
-    socket.on("stage", handleStage);
+    socket.on("gameUpdate", handleGameUpdate);
 
-    socket.on("winner", handleWinner);
     // useEffect treats the return value as a cleanup function
     return () => {
       socket.off("message", handleMessage);
       socket.off("lobbyDownload", handleLobbyDownload);
-      socket.off("stage", handleStage);
-      socket.off(winner, handleWinner);
+      socket.off("gameUpdate", handleGameUpdate);
     };
   }, [socket]);
 
-  async function findSong() {
-    const query = inputRef.current!.value;
-
-    // send song request to lobby websocket, then broadcast order to download
-    try {
-      const response = await axios.post("http://127.0.0.1:8080/song", {
-        q: query,
-        lobbyId: lobbyId,
-      });
-      console.log(response.data);
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.error(e.response?.data);
-      }
-    }
-  }
-
-  async function castVote(vote: string) {
-    try {
-      const response = await axios.post("http://127.0.0.1:8080/vote", {
-        vote: vote,
-        lobbyId: lobbyId,
-      });
-      console.log(response.data);
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.error(e.response?.data);
-      }
-    }
-  }
-
-  async function endVote() {
-    try {
-      const response = await axios.post("http://127.0.0.1:8080/endvote", {
-        lobbyId: lobbyId,
-      });
-      console.log(response.data);
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.error(e.response?.data);
-      }
-    }
-  }
-
-  async function getVotes() {
-    try {
-      const response = await axios.get("http://127.0.0.1:8080/vote", {
-        params: {
-          lobbyId: lobbyId,
-        },
-      });
-      console.log(response.data);
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.error(e.response?.data);
-      }
-    }
-  }
-
-  function endVideo() {
-    socket.emit("endVideo", lobbyId);
-  }
-
-  if (renderArr[0]) {
-    return <Pregame />;
-  } else if (renderArr[1]) {
-    return <PlayerChoice />;
-  } else if (renderArr[2]) {
-    return <VotePhase />;
-  } else if (renderArr[3]) {
-    return <Postgame />;
-  } else {
+  if (renderStage == 0) {
+    return <Pregame players={gameState.players} voters={gameState.voters} />;
+  } else if (renderStage == 1 && gameState.players[0] == username) {
     return (
-      <div className="mainContainer">
-        <div className="field">
-          <PlayerCard />
-          <div className="display">
-            {displayOn && (
-              <>
-                <video
-                  ref={videoRef}
-                  src={url}
-                  autoPlay
-                  onLoadedMetadata={() => {
-                    videoRef.current!.volume = 0.05;
-                    rangeRef.current!.value = "20";
-                  }}
-                />
-                <div className="controlsContainer">
-                  <button
-                    onClick={() => {
-                      videoRef.current!.muted = !videoRef.current!.muted;
-                    }}
-                  >
-                    Mute
-                  </button>
-                  <input
-                    ref={rangeRef}
-                    type="range"
-                    min={0}
-                    max={100}
-                    onChange={(e) => {
-                      videoRef.current!.volume = Number(e.target.value) / 400;
-                    }}
-                  />
-                  <button>Vote Pause</button>
-                </div>
-              </>
-            )}
-          </div>
-          <PlayerCard />
-        </div>
-
-        <input ref={inputRef} type="text" />
-        <button onClick={async () => findSong()}>Find Song</button>
-        <button onClick={async () => castVote("A")}>Vote</button>
-        <button onClick={async () => endVote()}>End Vote</button>
-        <button onClick={async () => getVotes()}>Get Votes</button>
-        <button onClick={() => sendMessage()}>Send Message</button>
-        <button onClick={async () => endVideo()}></button>
-      </div>
+      <PlayerChoice socket={socket} username={username} lobbyId={lobbyId} />
     );
+  } else if (renderStage == 1) {
+    return <Waiting />;
+  } else if (renderStage == 2) {
+    return <VideoPlayer url={url} />;
+  } else if (renderStage == 3 && gameState.players[1] == username) {
+    return (
+      <PlayerChoice socket={socket} username={username} lobbyId={lobbyId} />
+    );
+  } else if (renderStage == 3) {
+    return <Waiting />;
+  } else if (renderStage == 4) {
+    return <VideoPlayer url={url} />;
+  } else if (renderStage == 5) {
+    return <VotePhase socket={socket} lobbyId={lobbyId} />;
+  } else if (renderStage == 6) {
+    return <Postgame winner={gameState.winner} />;
+  } else {
+    return;
   }
 }
 
